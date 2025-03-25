@@ -1,100 +1,14 @@
-from dataclasses import dataclass
-from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Callable, Any
 import itertools as it
 from collections.abc import Iterator
 import time
 import re
 
+from errors import Error, make_error
+from util import Peekable, peek
+
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 ERROR_PREFIX_RE = re.compile(r"\[error\] -- Error: (/(?:[a-zA-Z0-9.]+/?)*):(\d+):\d+")
 ERROR_MSG_RE = re.compile(r"\[error\] +\|(.*)")
-
-
-class Peekable[T]:
-    peeked: bool = False
-    done: bool = False
-    top: T
-    inner: Iterator[T]
-
-    def __init__(self, inner: Iterator[T]):
-        self.inner = inner
-
-    def __iter__(self):
-        return self
-
-    def __next__(self) -> T:
-        if self.done:
-            raise StopIteration
-        if self.peeked:
-            self.peeked = False
-            result = self.top
-            return result
-        return next(self.inner)
-
-    def peek(self) -> Optional[T]:
-        if self.done:
-            return None
-        if self.peeked:
-            return self.top
-
-        self.peeked = True
-        try:
-            self.top = next(self.inner)
-            return self.top
-        except StopIteration:
-            self.done = True
-            return None
-
-
-def peek[T](s: Peekable[T]) -> Optional[T]:
-    return s.peek()
-
-
-@dataclass
-class Error(ABC):
-    filepath: str
-    row: int
-    colspan: Tuple[int, int]
-
-    @abstractmethod
-    def resolve(self, file: list[str]) -> bool:
-        ...
-
-
-known_errors = dict()
-
-def register_error(prefix: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    def inner[T](x: Callable[[str, int, Tuple[int, int]], T]) -> Callable[[str, int, Tuple[int, int]], T]:
-        known_errors[prefix] = x
-        return x
-    return inner
-
-
-def make_error(filepath: str, msg: str, row: int, colspan: Tuple[int, int]) -> Error:
-    for prefix, wrapper in known_errors.items():
-        if msg.startswith(prefix):
-            return wrapper(filepath, row, colspan)
-    return GenericError(filepath, row, colspan)
-
-
-@register_error("Context bounds will map to context parameters")
-class ContextBoundError(Error):
-    def resolve(self, file: list[str]) -> bool:
-        line = file[self.row - 1]
-
-        if self.colspan[1] < len(line):
-            if not line[self.colspan[1] + 1 :].startswith("using"):
-                file[self.row - 1] = (
-                    line[: self.colspan[1] + 1] + "using " + line[self.colspan[1] + 1 :]
-                )
-                return True
-        return False
-
-
-class GenericError(Error):
-    def resolve(self, file: list[str]) -> bool:
-        return False
 
 
 def strip_ansi(text: str) -> str:
