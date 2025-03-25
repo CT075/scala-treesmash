@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from typing import Optional
+from typing import Optional, Callable
 
 
 class Peekable[T]:
@@ -40,3 +40,10 @@ class Peekable[T]:
 
 def peek[T](s: Peekable[T]) -> Optional[T]:
     return s.peek()
+
+
+def is_prefix(needle: str) -> Callable[[str], bool]:
+    def f(haystack: str) -> bool:
+        return haystack.strip().startswith(needle)
+
+    return f

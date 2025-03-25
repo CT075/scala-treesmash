@@ -7,7 +7,7 @@ from errors import Error, make_error
 from util import Peekable, peek
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-ERROR_PREFIX_RE = re.compile(r"\[error\] -- Error: (/(?:[a-zA-Z0-9.]+/?)*):(\d+):\d+")
+ERROR_PREFIX_RE = re.compile(r"\[error\] -- .*Error: (/(?:[a-zA-Z0-9.]+/?)*):(\d+):\d+")
 ERROR_MSG_RE = re.compile(r"\[error\] +\|(.*)")
 
 
