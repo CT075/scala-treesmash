@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from typing import Optional, Callable
+import re
 
 
 class Peekable[T]:
@@ -47,3 +48,26 @@ def is_prefix(needle: str) -> Callable[[str], bool]:
         return haystack.strip().startswith(needle)
 
     return f
+
+
+def matches_regex(regex: re.Pattern[str]) -> Callable[[str], bool]:
+    def f(haystack: str) -> bool:
+        return bool(regex.match(haystack))
+
+    return f
+
+
+def rmatch_paren(haystack: str, st: int) -> Optional[int]:
+    if haystack[st] != ")":
+        return None
+
+    nesting = 0
+    for i in range(st - 1, -1, -1):
+        if haystack[i] == ")":
+            nesting += 1
+        if haystack[i] == "(":
+            if nesting > 0:
+                nesting -= 1
+            else:
+                return i
+    return None
